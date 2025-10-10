@@ -94,11 +94,10 @@ const ResourcePage: React.FC = () => {
   const hasLiked = currentUser ? resourceLikes.includes(currentUser.uid) : false;
   const isBookmarked = currentUser ? bookmarks.includes(resource.id) : false;
   const resourceEmpathyRatings = empathyRatings[resource.id] || [];
-  const averageEmpathyRating = resourceEmpathyRatings.length > 0
-      ? resourceEmpathyRatings.reduce((sum, r) => sum + r.rating, 0) / resourceEmpathyRatings.length
-      : 0;
-  const userEmpathyRating = resourceEmpathyRatings.find(r => r.userId === currentUser?.uid)?.rating || null;
-  
+    const averageEmpathyRating = resourceEmpathyRatings.length > 0
+        ? resourceEmpathyRatings.reduce((sum, r) => sum + r.rating, 0) / resourceEmpathyRatings.length
+        : 0;
+    const userEmpathyRating = resourceEmpathyRatings.find(r => r.userId === currentUser?.uid)?.rating ?? null;  
 
   return (
     <div className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">

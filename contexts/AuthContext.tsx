@@ -1,4 +1,8 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useMemo } from 'react';
+import { 
+  collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, doc, setDoc, updateDoc, getDoc 
+} from "firebase/firestore";
+import { db, auth } from "../services/firebase";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -7,8 +11,6 @@ import {
   updateProfile
 } from 'firebase/auth';
 import type { User, Resource, Comment, Report, EmpathyRating } from '../types';
-import { processFileContent } from '../services/geminiService';
-import { auth } from '../services/firebase';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 interface AuthContextType {
@@ -20,17 +22,17 @@ interface AuthContextType {
   reports: Report[];
   bookmarks: string[];
   empathyRatings: Record<string, EmpathyRating[]>;
-  login: (email:string, pass: string) => Promise<any>;
+  login: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<void>;
-  signup: (email:string, pass: string) => Promise<any>;
+  signup: (email: string, pass: string) => Promise<any>;
   addStory: (storyData: Pick<Resource, 'title' | 'category' | 'shortDescription' | 'content' | 'summary' | 'tags' | 'fileName'>) => Promise<void>;
   updateStory: (storyId: string, updates: Partial<Omit<Resource, 'id'>>) => void;
-  addComment: (resourceId: string, text: string) => void;
-  toggleLike: (resourceId: string) => void;
-  reportContent: (resourceId: string, resourceTitle: string) => void;
+  addComment: (resourceId: string, text: string) => Promise<void>;
+  toggleLike: (resourceId: string) => Promise<void>;
+  reportContent: (resourceId: string, resourceTitle: string) => Promise<void>;
   updateUserProfile: (name: string, imageFile: File | null) => Promise<void>;
-  toggleBookmark: (resourceId: string) => void;
-  rateEmpathy: (resourceId: string, rating: number) => void;
+  toggleBookmark: (resourceId: string) => Promise<void>;
+  rateEmpathy: (resourceId: string, rating: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,133 +47,119 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [empathyRatings, setEmpathyRatings] = useState<Record<string, EmpathyRating[]>>({});
 
+  // 🔐 Handle Authentication State
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const storedProfile = localStorage.getItem(`profile_${user.uid}`);
         let name = user.displayName || user.email?.split('@')[0] || 'User';
         let imageUrl = `https://picsum.photos/seed/${user.uid}/200/200`;
 
         if (storedProfile) {
-            try {
-                const customProfile = JSON.parse(storedProfile);
-                name = customProfile.name || name;
-                imageUrl = customProfile.imageUrl || imageUrl;
-            } catch (e) {
-                console.error("Failed to parse stored profile", e);
-            }
+          try {
+            const customProfile = JSON.parse(storedProfile);
+            name = customProfile.name || name;
+            imageUrl = customProfile.imageUrl || imageUrl;
+          } catch (e) {
+            console.error("Failed to parse stored profile", e);
+          }
         }
 
-        setCurrentUser({
-          uid: user.uid,
-          email: user.email,
-          name: name,
-          imageUrl: imageUrl,
-        });
+        setCurrentUser({ uid: user.uid, email: user.email, name, imageUrl });
 
-        // Load user's bookmarks from localStorage
-        const storedBookmarks = localStorage.getItem(`bookmarks_${user.uid}`);
-        if (storedBookmarks) {
-            try {
-                setBookmarks(JSON.parse(storedBookmarks));
-            } catch (e) {
-                console.error("Failed to parse bookmarks from localStorage", e);
-                setBookmarks([]);
-            }
+        // 🔁 Sync bookmarks from Firestore
+        const userDocRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userDocRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setBookmarks(data.bookmarks || []);
         } else {
-            setBookmarks([]);
+          await setDoc(userDocRef, { bookmarks: [] });
+          setBookmarks([]);
         }
-
       } else {
         setCurrentUser(null);
-        setBookmarks([]); // Clear bookmarks when user logs out
+        setBookmarks([]);
       }
       setLoading(false);
     });
     return unsubscribe;
   }, []);
 
-  // Load global community data from localStorage on startup
+  // 🔁 Real-time sync for all collections
   useEffect(() => {
-    try {
-      const storedCommunityData = localStorage.getItem('community_data');
-      if (storedCommunityData) {
-        const { stories: storedStories, comments: storedComments, likes: storedLikes, reports: storedReports, empathyRatings: storedEmpathyRatings } = JSON.parse(storedCommunityData);
-        setStories(storedStories || []);
-        setComments(storedComments || []);
-        setLikes(storedLikes || {});
-        setReports(storedReports || []);
-        setEmpathyRatings(storedEmpathyRatings || {});
-      }
-    } catch (e) {
-      console.error("Failed to parse community data from localStorage", e);
-    }
-  }, []);
+    const unsubStories = onSnapshot(query(collection(db, "stories"), orderBy("createdAt", "desc")), (snapshot) => {
+      const storyList: Resource[] = snapshot.docs.map(doc => ({
+        ...(doc.data() as Resource),
+        id: doc.id
+      }));
+      setStories(storyList);
+    });
 
-  // Persist global community data to localStorage whenever it changes
-  useEffect(() => {
-    try {
-      const communityData = { stories, comments, likes, reports, empathyRatings };
-      localStorage.setItem('community_data', JSON.stringify(communityData));
-    } catch (error) {
-      console.error("Could not save community data to localStorage:", error);
-    }
-  }, [stories, comments, likes, reports, empathyRatings]);
+    const unsubComments = onSnapshot(collection(db, "comments"), (snapshot) => {
+      const commentList: Comment[] = snapshot.docs.map(doc => doc.data() as Comment);
+      setComments(commentList);
+    });
 
-  
-  // Persist user-specific bookmarks to localStorage whenever they change
-  useEffect(() => {
-    if (currentUser && !loading) {
-      try {
-        localStorage.setItem(`bookmarks_${currentUser.uid}`, JSON.stringify(bookmarks));
-      } catch (error) {
-        console.error("Could not save bookmarks to localStorage:", error);
-      }
-    }
-  }, [bookmarks, currentUser, loading]);
+    const unsubLikes = onSnapshot(collection(db, "likes"), (snapshot) => {
+      const likeMap: Record<string, string[]> = {};
+      snapshot.docs.forEach(doc => {
+        likeMap[doc.id] = doc.data().userIds || [];
+      });
+      setLikes(likeMap);
+    });
 
+    const unsubReports = onSnapshot(collection(db, "reports"), (snapshot) => {
+      const reportList: Report[] = snapshot.docs.map(doc => doc.data() as Report);
+      setReports(reportList);
+    });
 
-  const login = useCallback((email: string, password: string) => {
-    return signInWithEmailAndPassword(auth, email, password);
-  }, []);
+    const unsubEmpathy = onSnapshot(collection(db, "empathyRatings"), (snapshot) => {
+      const map: Record<string, EmpathyRating[]> = {};
+      snapshot.docs.forEach(doc => {
+        map[doc.id] = doc.data().ratings || [];
+      });
+      setEmpathyRatings(map);
+    });
 
-  const logout = useCallback(() => {
-    if (currentUser) {
-      // Clear localStorage for the user on logout.
-      localStorage.removeItem(`bookmarks_${currentUser.uid}`);
-    }
-    setBookmarks([]); // Clear bookmarks from state immediately
-    return signOut(auth);
-  }, [currentUser]);
-  
-  const signup = useCallback((email: string, password: string) => {
-    return createUserWithEmailAndPassword(auth, email, password);
-  }, [])
-
-  const addStory = useCallback(async (storyData: Pick<Resource, 'title' | 'category' | 'shortDescription' | 'content' | 'summary' | 'tags' | 'fileName'>) => {
-    const user = auth.currentUser;
-    if (!user || !currentUser) throw new Error("User not authenticated");
-
-    const newStory: Resource = {
-      ...storyData,
-      id: `story-${Date.now()}`,
-      authorId: user.uid,
-      authorName: currentUser.name || user.displayName || user.email?.split('@')[0] || 'User',
-      status: 'pending_review',
-      imageUrl: `https://picsum.photos/seed/${Date.now()}/400/300`,
+    return () => {
+      unsubStories();
+      unsubComments();
+      unsubLikes();
+      unsubReports();
+      unsubEmpathy();
     };
-
-    setStories(prev => [...prev, newStory]);
-  }, [currentUser]);
-  
-  const updateStory = useCallback((storyId: string, updates: Partial<Omit<Resource, 'id'>>) => {
-    setStories(prevStories => prevStories.map(s => 
-      s.id === storyId ? { ...s, ...updates } : s
-    ));
   }, []);
-  
-  const addComment = useCallback((resourceId: string, text: string) => {
-    if (!currentUser) {
+
+  // 🔧 Auth Actions
+  const login = useCallback((email: string, password: string) => signInWithEmailAndPassword(auth, email, password), []);
+  const signup = useCallback((email: string, password: string) => createUserWithEmailAndPassword(auth, email, password), []);
+  const logout = useCallback(() => signOut(auth), []);
+
+  // 📝 Add a story
+  const addStory = useCallback(async (storyData: Pick<Resource, 'title' | 'category' | 'shortDescription' | 'content' | 'summary' | 'tags' | 'fileName'>) => {
+    if (!currentUser) throw new Error("User not authenticated");
+
+    const newStory = {
+      ...storyData,
+      authorId: currentUser.uid,
+      authorName: currentUser.name,
+      imageUrl: `https://picsum.photos/seed/${Date.now()}/400/300`,
+      status: "pending_review",
+      createdAt: serverTimestamp(),
+    };
+    await addDoc(collection(db, "stories"), newStory);
+  }, [currentUser]);
+
+  // ✏️ Update a story locally (for UI sync)
+  const updateStory = useCallback((storyId: string, updates: Partial<Omit<Resource, 'id'>>) => {
+    setStories(prev => prev.map(s => s.id === storyId ? { ...s, ...updates } : s));
+  }, []);
+
+  // 💬 Add comment
+  const addComment = useCallback(async (resourceId: string, text: string) => {
+    const user = auth.currentUser;
+    if (!user || !currentUser) {
       console.error("User must be logged in to comment.");
       return;
     }
@@ -179,123 +167,89 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: `comment-${Date.now()}`,
       resourceId,
       authorId: currentUser.uid,
-      authorName: currentUser.name || 'Anonymous',
+      authorName: currentUser.name ?? user.displayName ?? user.email?.split('@')[0] ?? 'Anonymous',
       authorImageUrl: currentUser.imageUrl,
       text,
       timestamp: Date.now(),
     };
-    setComments(prev => [...prev, newComment]);
+    await addDoc(collection(db, "comments"), newComment);
   }, [currentUser]);
 
-  const toggleLike = useCallback((resourceId: string) => {
-    if (!currentUser) {
-      console.error("User must be logged in to like.");
-      return;
+  // ❤️ Toggle like
+  const toggleLike = useCallback(async (resourceId: string) => {
+    if (!currentUser) return;
+    const likeRef = doc(db, "likes", resourceId);
+    const snap = await getDoc(likeRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      const updated = data.userIds.includes(currentUser.uid)
+        ? data.userIds.filter((id: string) => id !== currentUser.uid)
+        : [...data.userIds, currentUser.uid];
+      await updateDoc(likeRef, { userIds: updated });
+    } else {
+      await setDoc(likeRef, { userIds: [currentUser.uid] });
     }
-    setLikes(prev => {
-      const currentLikes = prev[resourceId] || [];
-      const userHasLiked = currentLikes.includes(currentUser.uid);
-      
-      const newLikes = userHasLiked
-        ? currentLikes.filter(uid => uid !== currentUser.uid)
-        : [...currentLikes, currentUser.uid];
-      
-      return {
-        ...prev,
-        [resourceId]: newLikes,
-      };
-    });
   }, [currentUser]);
 
-  const toggleBookmark = useCallback((resourceId: string) => {
-    if (!currentUser) {
-        console.error("User must be logged in to bookmark.");
-        return;
-    }
-    setBookmarks(prev => {
-        const isBookmarked = prev.includes(resourceId);
-        return isBookmarked
-            ? prev.filter(id => id !== resourceId)
-            : [...prev, resourceId];
-    });
+  // 🚩 Report content
+  const reportContent = useCallback(async (resourceId: string, resourceTitle: string) => {
+    if (!currentUser) return;
+    const report = { resourceId, reporterId: currentUser.uid, resourceTitle, timestamp: Date.now() };
+    await addDoc(collection(db, "reports"), report);
   }, [currentUser]);
 
-  const reportContent = useCallback((resourceId: string, resourceTitle: string) => {
-    if (!currentUser) {
-      console.error("User must be logged in to report content.");
-      return;
-    }
-    // Prevent duplicate reports by the same user for the same resource
-    if (reports.some(r => r.resourceId === resourceId && r.reporterId === currentUser.uid)) {
-      console.log("Content already reported by this user.");
-      return;
-    }
-
-    const newReport: Report = {
-      resourceId,
-      reporterId: currentUser.uid,
-      timestamp: Date.now(),
-      resourceTitle,
-    };
-    setReports(prev => [...prev, newReport]);
-  }, [currentUser, reports]);
-
-  const rateEmpathy = useCallback((resourceId: string, rating: number) => {
-    if (!currentUser) {
-      console.error("User must be logged in to rate.");
-      return;
-    }
-    if (rating < 1 || rating > 5) {
-      console.error("Invalid rating value.");
-      return;
-    }
-
-    setEmpathyRatings(prev => {
-      const currentRatings = prev[resourceId] || [];
-      const userRatingIndex = currentRatings.findIndex(r => r.userId === currentUser.uid);
-      
-      let newRatings;
-      if (userRatingIndex > -1) {
-        // User is changing their rating
-        newRatings = [...currentRatings];
-        newRatings[userRatingIndex] = { ...newRatings[userRatingIndex], rating };
-      } else {
-        // User is rating for the first time
-        newRatings = [...currentRatings, { userId: currentUser.uid, rating }];
-      }
-      
-      return { ...prev, [resourceId]: newRatings };
-    });
+  // 🔖 Toggle bookmark (stored per-user)
+  const toggleBookmark = useCallback(async (resourceId: string) => {
+    if (!currentUser) return;
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
+    const userData = snap.exists() ? snap.data() : { bookmarks: [] };
+    const updated = userData.bookmarks.includes(resourceId)
+      ? userData.bookmarks.filter((id: string) => id !== resourceId)
+      : [...userData.bookmarks, resourceId];
+    await setDoc(userRef, { bookmarks: updated }, { merge: true });
+    setBookmarks(updated);
   }, [currentUser]);
 
+  // 💖 Empathy rating
+  const rateEmpathy = useCallback(async(resourceId: string, rating: number) => {
+      if (!currentUser || rating < 0 || rating > 100) return;
+      
+      setEmpathyRatings(prev => {
+        const newRatings = { ...prev };
+        let currentRatings = newRatings[resourceId] || [];
+        const userRatingIndex = currentRatings.findIndex(r => r.userId === currentUser.uid);
+
+        if (userRatingIndex > -1) {
+          currentRatings[userRatingIndex].rating = rating;
+        } else {
+          currentRatings.push({ userId: currentUser.uid, rating });
+        }
+        
+        newRatings[resourceId] = [...currentRatings];
+        return newRatings;
+      });
+    }, [currentUser]);
+  // 🧑‍🎨 Update user profile
   const updateUserProfile = useCallback(async (name: string, imageFile: File | null) => {
     const user = auth.currentUser;
     if (!user || !currentUser) throw new Error("User not authenticated");
 
     let newImageUrl = currentUser.imageUrl;
-    
     if (imageFile) {
-        newImageUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(imageFile!);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
+      newImageUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(imageFile);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+      });
     }
-    
-    // Update Firebase Auth displayName
+
     await updateProfile(user, { displayName: name });
-
-    const updatedUser = {
-        ...currentUser,
-        name: name,
-        imageUrl: newImageUrl,
-    };
-
+    const updatedUser = { ...currentUser, name, imageUrl: newImageUrl };
     setCurrentUser(updatedUser);
-    localStorage.setItem(`profile_${user.uid}`, JSON.stringify({ name: name, imageUrl: newImageUrl }));
+    localStorage.setItem(`profile_${user.uid}`, JSON.stringify({ name, imageUrl: newImageUrl }));
   }, [currentUser]);
-
 
   const value = useMemo(() => ({
     currentUser,
@@ -309,7 +263,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login,
     logout,
     signup,
-    addStory, 
+    addStory,
     updateStory,
     addComment,
     toggleLike,
@@ -317,17 +271,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     updateUserProfile,
     toggleBookmark,
     rateEmpathy,
-  }), [
-    currentUser, loading, stories, comments, likes, reports, bookmarks, empathyRatings,
-    login, logout, signup, addStory, updateStory, addComment, toggleLike,
-    reportContent, updateUserProfile, toggleBookmark, rateEmpathy
-  ]);
+  }), [currentUser, loading, stories, comments, likes, reports, bookmarks, empathyRatings]);
 
   return (
     <AuthContext.Provider value={value}>
       {loading ? (
         <div className="flex justify-center items-center min-h-screen">
-            <LoadingSpinner/>
+          <LoadingSpinner />
         </div>
       ) : children}
     </AuthContext.Provider>
@@ -336,8 +286,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };

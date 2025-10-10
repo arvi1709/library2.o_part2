@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 // =================================================================================
 // --- IMPORTANT: FIREBASE CONFIGURATION REQUIRED ---
@@ -41,6 +42,7 @@ if (!isFirebaseConfigValid) {
 // Initialize Firebase
 // We initialize it anyway so the app doesn't crash, but features will be blocked by the UI.
 const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
 
 // Export auth instance to be used in other parts of the app
 export const auth = getAuth(app);
