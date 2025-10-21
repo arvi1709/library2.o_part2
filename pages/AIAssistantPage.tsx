@@ -15,7 +15,7 @@ const AIAssistantPage: React.FC = () => {
     setMessages([
       {
         author: MessageAuthor.AI,
-        text: "Hello! I'm the Living Library's AI Assistant. How can I help you today? You can ask me about our resources or any general knowledge questions.",
+        text: "Hello! My name is Leo, your friendly guide to the Living Library. I'm here to help you discover the powerful stories within our collection. What are you curious about today?",
       },
     ]);
   }, []);
@@ -65,8 +65,8 @@ const AIAssistantPage: React.FC = () => {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 flex flex-col h-[75vh]">
       <div className="p-4 border-b dark:border-slate-700">
-        <h1 className="text-xl font-bold text-brand-blue">AI Assistant</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Your personal guide to knowledge</p>
+        <h1 className="text-xl font-bold text-brand-blue">Leo, Your Library Guide</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Ask me about our stories or anything else you're curious about.</p>
       </div>
       <div className="flex-grow p-4 overflow-y-auto">
         <div className="space-y-4">
