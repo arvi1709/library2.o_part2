@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { RESOURCES } from '../constants';
 import type { Resource } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -8,9 +8,10 @@ import { useAuth } from '../contexts/AuthContext';
 
 const ResourcePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [resource, setResource] = useState<Resource | null>(null);
   const [error, setError] = useState<string>('');
-  const { stories, currentUser, loading: authLoading, comments, likes, reports, addComment, toggleLike, reportContent, bookmarks, toggleBookmark, empathyRatings, rateEmpathy } = useAuth();
+  const { stories, currentUser, loading: authLoading, comments, likes, reports, addComment, toggleLike, reportContent, bookmarks, toggleBookmark, empathyRatings, rateEmpathy, deleteComment, deleteStory } = useAuth();
   const [newComment, setNewComment] = useState('');
 
   const allResources = useMemo(() => {
@@ -36,13 +37,24 @@ const ResourcePage: React.FC = () => {
     }
   }, [id, allResources, currentUser, authLoading]);
 
-  const handlePostComment = (e: React.FormEvent) => {
+  const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !resource) return;
-    addComment(resource.id, newComment);
-    setNewComment('');
+    
+    try {
+      await addComment(resource.id, newComment);
+      setNewComment('');
+    } catch (error: any) {
+      alert(error.message || 'Failed to post comment. Please try again.');
+    }
   };
   
+  const handleDeleteComment = (commentId: string) => {
+    if (window.confirm('Are you sure you want to delete this comment?')) {
+      deleteComment(commentId);
+    }
+  };
+
   const isReported = useMemo(() => {
     if (!currentUser || !resource) return false;
     return reports.some(r => r.resourceId === resource.id && r.reporterId === currentUser.uid);
@@ -61,6 +73,20 @@ const ResourcePage: React.FC = () => {
       }
   };
 
+  const handleDeleteStory = () => {
+    if (!currentUser || !resource || currentUser.uid !== resource.authorId) return;
+    if (window.confirm(`Are you sure you want to permanently delete "${resource.title}"? This action cannot be undone.`)) {
+      deleteStory(resource.id)
+        .then(() => {
+          navigate('/profile');
+        })
+        .catch((err) => {
+          console.error("Failed to delete story:", err);
+          alert("There was an error deleting the story. Please try again.");
+        });
+    }
+  };
+
 
   if (authLoading) {
     return (
@@ -75,7 +101,7 @@ const ResourcePage: React.FC = () => {
         <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
             <h2 className="text-2xl font-bold text-red-600">Access Denied</h2>
             <p className="text-slate-600 dark:text-slate-300 mt-2">{error}</p>
-            <Link to="/library" className="mt-4 inline-block bg-brand-blue text-white px-4 py-2 rounded-lg">
+            <Link to="/library" className="mt-4 inline-block bg-brand-navy text-white px-4 py-2 rounded-lg">
                 Back to Library
             </Link>
         </div>
@@ -94,18 +120,21 @@ const ResourcePage: React.FC = () => {
   const hasLiked = currentUser ? resourceLikes.includes(currentUser.uid) : false;
   const isBookmarked = currentUser ? bookmarks.includes(resource.id) : false;
   const resourceEmpathyRatings = empathyRatings[resource.id] || [];
-  const averageEmpathyRating = resourceEmpathyRatings.length > 0
-      ? resourceEmpathyRatings.reduce((sum, r) => sum + r.rating, 0) / resourceEmpathyRatings.length
-      : 0;
-  const userEmpathyRating = resourceEmpathyRatings.find(r => r.userId === currentUser?.uid)?.rating || null;
-  
+    const averageEmpathyRating = resourceEmpathyRatings.length > 0
+        ? resourceEmpathyRatings.reduce((sum, r) => sum + r.rating, 0) / resourceEmpathyRatings.length
+        : 0;
+    const userEmpathyRating = resourceEmpathyRatings.find(r => r.userId === currentUser?.uid)?.rating ?? null;  
 
   return (
     <div className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
       <div className="max-w-4xl mx-auto">
-        <span className="inline-block bg-brand-blue/10 dark:bg-brand-blue/20 text-brand-blue text-sm font-semibold px-3 py-1 rounded-full mb-4">
-          {resource.category}
-        </span>
+        <div className="flex flex-wrap gap-2 mb-4">
+            {(Array.isArray(resource.category) ? resource.category : [resource.category]).map(cat => (
+            <span key={cat} className="inline-block bg-brand-navy/10 dark:bg-brand-navy/20 text-brand-navy text-sm font-semibold px-3 py-1 rounded-full">
+              {cat}
+            </span>
+          ))}
+        </div>
         <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">{resource.title}</h1>
         {resource.authorName && <p className="text-lg text-slate-600 dark:text-slate-300 mb-4">By {resource.authorName}</p>}
         <img src={resource.imageUrl} alt={resource.title} className="w-full h-64 object-cover rounded-lg mb-6 shadow-md" loading="lazy" decoding="async"/>
@@ -113,7 +142,7 @@ const ResourcePage: React.FC = () => {
         {resource.tags && resource.tags.length > 0 && (
           <div className="mb-6 flex flex-wrap gap-2">
             {resource.tags.map(tag => (
-              <span key={tag} className="bg-brand-blue/10 dark:bg-brand-blue/20 text-brand-blue text-sm font-semibold px-3 py-1 rounded-full">{tag}</span>
+              <span key={tag} className="bg-brand-navy/10 dark:bg-brand-navy/20 text-brand-navy text-sm font-semibold px-3 py-1 rounded-full">{tag}</span>
             ))}
           </div>
         )}
@@ -138,9 +167,9 @@ const ResourcePage: React.FC = () => {
                 onClick={() => toggleBookmark(resource.id)}
                 disabled={!currentUser}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-colors duration-200 ${
-                    isBookmarked
-                    ? 'bg-brand-blue text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  isBookmarked
+                  ? 'bg-brand-navy text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                 } disabled:cursor-not-allowed disabled:opacity-60`}
                 aria-label={isBookmarked ? 'Remove from Bookmarks' : 'Add to Bookmarks'}
             >
@@ -167,6 +196,18 @@ const ResourcePage: React.FC = () => {
                 </svg>
                 <span>{isReported ? 'Reported' : 'Report'}</span>
             </button>
+            {currentUser && resource.authorId === currentUser.uid && (
+              <button
+                onClick={handleDeleteStory}
+                className="flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-colors duration-200 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800"
+                aria-label="Delete this story"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" />
+                </svg>
+                <span>Delete</span>
+              </button>
+            )}
         </div>
 
         <div className="prose prose-lg max-w-none text-slate-700 dark:text-slate-300">
@@ -176,18 +217,20 @@ const ResourcePage: React.FC = () => {
               <p className="text-yellow-800 dark:text-yellow-300">This story is currently being processed. The transcript will be available shortly.</p>
             </div>
           )}
-           {resource.status === 'pending_review' && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 dark:border-blue-500 rounded-r-lg">
+          {resource.status === 'pending_review' && (
+            <div className="p-4 bg-brand-navy/5 dark:bg-blue-900/20 border-l-4 border-blue-400 dark:border-blue-500 rounded-r-lg">
               <p className="text-blue-800 dark:text-blue-300">This story is pending your review. You can edit and publish it from your profile page.</p>
             </div>
           )}
-          <p>{resource.content}</p>
+          <div className="mt-6 p-6 bg-slate-50 dark:bg-slate-900/50 border dark:border-slate-700 rounded-lg">
+            <p className="whitespace-pre-wrap">{resource.content}</p>
+          </div>
         </div>
 
         <div className="mt-10 border-t dark:border-slate-700 pt-8">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">AI-Powered Summary</h2>
-          {resource.summary && resource.summary.trim() !== '' && resource.status === 'published' ? (
-            <div className="mt-6 p-6 bg-blue-50 dark:bg-slate-800/50 border-l-4 border-brand-blue rounded-r-lg animate-fade-in">
+            {resource.summary && resource.summary.trim() !== '' && resource.status === 'published' ? (
+            <div className="mt-6 p-6 bg-brand-navy/5 dark:bg-slate-800/50 border-l-4 border-brand-navy rounded-r-lg animate-fade-in">
               <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{resource.summary}</p>
             </div>
           ) : (
@@ -205,7 +248,7 @@ const ResourcePage: React.FC = () => {
             />
             {!currentUser && (
                  <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">
-                    <Link to="/auth" className="font-semibold text-brand-orange hover:underline">Log in</Link> to share how this story made you feel.
+                    <Link to="/auth" className="font-semibold hover:underline" style={{ color: '#bf092f' }}>Log in</Link> to share how this story made you feel.
                 </p>
             )}
         </div>
@@ -222,12 +265,12 @@ const ResourcePage: React.FC = () => {
                                 rows={3}
                                 value={newComment}
                                 onChange={(e) => setNewComment(e.target.value)}
-                                className="block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm p-3 focus:ring-brand-blue focus:border-brand-blue dark:placeholder-slate-400"
+                                className="block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm p-3 focus:ring-brand-navy focus:border-brand-navy dark:placeholder-slate-400"
                                 placeholder="Add to the discussion..."
                                 required
                             />
                             <div className="mt-2 flex justify-end">
-                                <button type="submit" className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-blue hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-blue">
+                                <button type="submit" className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-navy hover:bg-brand-maroon focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-navy">
                                     Post Comment
                                 </button>
                             </div>
@@ -237,7 +280,7 @@ const ResourcePage: React.FC = () => {
             ) : (
                 <div className="text-center p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg border dark:border-slate-700">
                     <p className="text-slate-600 dark:text-slate-300">
-                        <Link to="/auth" className="font-semibold text-brand-orange hover:underline">Log in or sign up</Link> to join the discussion.
+                        <Link to="/auth" className="font-semibold hover:underline" style={{ color: '#bf092f' }}>Log in or sign up</Link> to join the discussion.
                     </p>
                 </div>
             )}
@@ -247,9 +290,20 @@ const ResourcePage: React.FC = () => {
                       <div key={comment.id} className="flex items-start space-x-4 animate-fade-in">
                         <img src={comment.authorImageUrl} alt={comment.authorName} className="h-10 w-10 rounded-full object-cover" loading="lazy" decoding="async" />
                         <div className="min-w-0 flex-1">
-                            <div className="text-sm">
+                            <div className="flex justify-between items-center">
+                              <div>
                                 <span className="font-bold text-slate-800 dark:text-slate-200">{comment.authorName}</span>
                                 <span className="text-slate-500 dark:text-slate-400 ml-2">· {new Date(comment.timestamp).toLocaleDateString()}</span>
+                              </div>
+                              {currentUser && currentUser.uid === comment.authorId && (
+                                <button
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 text-xs font-semibold"
+                                  aria-label="Delete comment"
+                                >
+                                  DELETE
+                                </button>
+                              )}
                             </div>
                             <p className="mt-1 text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{comment.text}</p>
                         </div>

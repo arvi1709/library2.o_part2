@@ -1,88 +1,93 @@
-
 import React from 'react';
 import type { Resource, TeamMember } from './types';
 
 export const RESOURCES: Resource[] = [
   {
     id: '1',
-    title: 'The Future of Renewable Energy',
-    category: 'Science',
-    shortDescription: 'An in-depth look at solar, wind, and geothermal energy sources.',
-    content: 'Renewable energy is derived from natural sources that are replenished on a human timescale. The main forms of renewable energy are solar, wind, geothermal, hydropower, and biomass. In 2020, renewable energy sources accounted for about 12.6% of total U.S. energy consumption and about 19.8% of electricity generation. The push towards a sustainable future has accelerated research and development in this field, with significant improvements in efficiency and cost-effectiveness. Solar panels, for instance, have seen a drastic price reduction over the past decade, making them more accessible for both residential and commercial use. Wind turbines are becoming larger and more powerful, capable of powering thousands of homes. Geothermal energy taps into the Earth\'s internal heat, offering a consistent and reliable power source. The transition to renewable energy is crucial for combating climate change and reducing our reliance on fossil fuels.',
-    imageUrl: 'https://picsum.photos/seed/science/400/300',
+    title: 'The Weight of a Name',
+    category: ['Caste', 'Identity'],
+    shortDescription: 'A personal account of navigating urban life while carrying a last name that reveals a "lower-caste" origin.',
+    content: 'Growing up, my last name was just a name. In the city, it felt anonymous. But as I entered college and later the professional world, I began to see the subtle shifts in people\'s eyes when they heard it. It was a key that unlocked a history I hadn\'t fully claimed, a history of oppression and resilience. This is the story of how I learned to carry the weight of my name not as a burden, but as a banner of my heritage and a testament to my ancestors\' survival.',
+    imageUrl: 'https://picsum.photos/seed/caste-identity/400/300',
     status: 'published',
-    tags: ['Solar', 'Wind', 'Geothermal', 'Sustainability', 'Climate Change'],
-    authorName: 'Sofia Rossi',
+    tags: ['Caste System', 'Discrimination', 'Identity', 'Social Justice', 'India'],
+    authorName: 'Priya Rao',
   },
   {
     id: '2',
-    title: 'A Brief History of Classical Music',
-    category: 'Arts',
-    shortDescription: 'From the Baroque period to the Romantic era, explore the masters.',
-    content: 'Classical music is a broad term that usually refers to the standard music of countries in the Western world. It is music that has been composed by musicians who are trained in the art of writing music and written down in music notation so that other musicians can play it. The history of classical music is often divided into stylistic periods. The Baroque period (1600-1750) was characterized by its ornate detail, with composers like Bach and Handel leading the way. The Classical period (1750-1820) followed, emphasizing elegance and balance, with Mozart and Haydn as its most famous composers. The Romantic era (1820-1900) brought intense emotion and individualism, with giants like Beethoven, Chopin, and Wagner. Each period contributed unique forms, structures, and emotional palettes to the rich tapestry of classical music.',
-    imageUrl: 'https://picsum.photos/seed/arts/400/300',
+    title: 'Finding My Voice',
+    category: ['Gender', 'LGBTQ+'],
+    shortDescription: 'The journey of a transgender man\'s self-discovery and transition in a society bound by traditional norms.',
+    content: 'For years, my reflection felt like a stranger. I was playing a role assigned to me at birth, and the script was suffocating. The journey to find my true self—to align my body with my soul—was the most challenging and liberating experience of my life. It was a path marked by fear, loss, and immense courage, but it led me to a place of authenticity where I could finally hear my own voice, clear and strong.',
+    imageUrl: 'https://picsum.photos/seed/gender-journey/400/300',
     status: 'published',
-    tags: ['Music', 'Baroque', 'Classical', 'Romantic', 'Composers'],
-    authorName: 'Eleanor Vance',
+    tags: ['Transgender', 'Gender Identity', 'Self-Discovery', 'Community', 'Advocacy'],
+    authorName: 'Alex Chen',
   },
   {
     id: '3',
-    title: 'The Rise of Artificial Intelligence',
-    category: 'Technology',
-    shortDescription: 'Understanding machine learning, neural networks, and their impact.',
-    content: 'Artificial intelligence (AI) is the simulation of human intelligence processes by machines, especially computer systems. These processes include learning, reasoning, and self-correction. Particular applications of AI include expert systems, natural language processing (NLP), speech recognition, and machine vision. The field has seen exponential growth in recent years, largely due to the availability of large datasets and advancements in computational power. Machine learning, a subset of AI, allows systems to automatically learn and improve from experience without being explicitly programmed. Deep learning, a further subset, utilizes neural networks with many layers to analyze complex patterns in data, powering everything from self-driving cars to medical diagnostics. The societal impact of AI is profound, raising important ethical questions while offering unprecedented opportunities for innovation.',
-    imageUrl: 'https://picsum.photos/seed/tech/400/300',
+    title: 'Two Rivers, One Home',
+    category: ['Migration', 'Culture'],
+    shortDescription: 'A refugee\'s story of fleeing conflict and building a new life, grappling with memories of the past and hopes for the future.',
+    content: 'I carry two rivers inside me: the one that flowed through my childhood village, now a memory clouded by smoke, and the one that runs through this new city, a current of unfamiliar faces and languages. To be a refugee is to live in this constant state of duality—mourning a home you can never return to while building a new one from scratch. This is my story of navigating that current, finding kindness in strangers, and learning that "home" can be a place you build, not just a place you leave behind.',
+    imageUrl: 'https://picsum.photos/seed/migration-story/400/300',
     status: 'published',
-    tags: ['AI', 'Machine Learning', 'Neural Networks', 'Tech Ethics', 'Innovation'],
-    authorName: 'Kenji Tanaka',
+    tags: ['Refugee Experience', 'Migration', 'Belonging', 'Cultural Identity', 'Resilience'],
+    authorName: 'Fatima Al-Jamil',
   },
   {
     id: '4',
-    title: 'Global Economic Trends in the 21st Century',
-    category: 'Economics',
-    shortDescription: 'Analyzing globalization, emerging markets, and digital currencies.',
-    content: 'The 21st-century global economy is characterized by increasing interconnectedness, rapid technological change, and the rise of emerging markets. Globalization has facilitated the flow of goods, services, capital, and information across borders, but has also created challenges related to inequality and economic volatility. Emerging economies, particularly in Asia, have become major engines of global growth. The digital revolution has transformed industries, with e-commerce, digital payments, and cryptocurrencies like Bitcoin challenging traditional financial systems. Central banks are exploring the issuance of their own digital currencies (CBDCs). Key challenges facing the global economy include climate change, geopolitical tensions, and the need to ensure that economic growth is inclusive and sustainable.',
-    imageUrl: 'https://picsum.photos/seed/economics/400/300',
+    title: 'The Echo of a Protest',
+    category: ['Social Justice', 'Activism'],
+    shortDescription: 'An activist recounts their experience in a major social movement and the personal transformation that followed.',
+    content: 'The first time I joined the protest, my voice was a timid whisper among a roar of thousands. But with every chant, every shared story of injustice, that whisper grew. Activism is not just about changing laws; it\'s about changing yourself. It\'s about unlearning silence and finding a collective strength you never knew you had. The echoes of that protest still live in me, a constant reminder that even the smallest voice can contribute to a chorus of change.',
+    imageUrl: 'https://picsum.photos/seed/social-justice/400/300',
     status: 'published',
-    tags: ['Globalization', 'Economics', 'Crypto', 'Emerging Markets', 'Finance'],
-    authorName: 'Marcus Bell',
+    tags: ['Activism', 'Social Protest', 'Community Organizing', 'Human Rights', 'Change'],
+    authorName: 'David Imani',
   },
 ];
 
 export const TEAM_MEMBERS: TeamMember[] = [
   {
-    name: 'Dr. Evelyn Reed',
-    role: 'Project Lead & AI Specialist',
-    imageUrl: 'https://picsum.photos/seed/person1/200/200',
-    bio: 'Evelyn holds a Ph.D. in Computer Science and has over 15 years of experience in machine learning and natural language processing. She is the visionary behind Living Library 2.0.'
+    name: 'Arvind Kumar',
+    role: 'Project Developer',
+    imageUrl: '/arvind.webp',
+    bio: 'Arvind is a B.TECH CSE AIML Student at SGT University. He is passionate about leveraging AI to create impactful educational tools and has been instrumental in conceptualizing and leading the Living Library 2.0 project.'
   },
   {
-    name: 'David Chen',
-    role: 'Lead Frontend Engineer',
-    imageUrl: 'https://picsum.photos/seed/person2/200/200',
-    bio: 'David is a passionate developer with a keen eye for UI/UX design. He brought the Living Library 2.0 interface to life with his expertise in React and modern web technologies.'
+    name: 'Deepak Yadav',
+    role: 'Project Developer',
+    imageUrl: '/deepak.jpg',
+    bio: 'Deepak Yadav is a B.TECH CSE AIML Student at SGT University. He passionate developer with a keen eye for UI/UX design. He brought the Living Library 2.0 interface to life with his expertise in React and modern web technologies.'
   },
   {
-    name: 'Maria Garcia',
-    role: 'Content Strategist & Librarian',
-    imageUrl: 'https://picsum.photos/seed/person3/200/200',
-    bio: 'With a background in library sciences, Maria curates the resources and ensures the quality and relevance of the content available in the Living Library.'
+    name: 'Simarjot Kaur',
+    role: 'Creative Content Head',
+    imageUrl: '/sjk.jpg',
+    bio: 'Simarjot Kaur is the Creative Content Head and a dedicated volunteer at the Living Library. She curates and crafts compelling narratives that resonate with our diverse audience, ensuring that every story is told with authenticity and empathy.'
   },
 ];
 
 export const MENTORS: TeamMember[] = [
   {
-    name: 'Professor Alistair Finch',
-    role: 'Academic Advisor',
-    imageUrl: 'https://picsum.photos/seed/mentor1/200/200',
-    bio: 'A renowned professor in digital humanities, Alistair provides guidance on the ethical implications and academic applications of our AI-powered platform.'
+    name: 'Dr. Nazima Parveen',
+    role: 'PI (Living Library 2.O Project)',
+    imageUrl: '/parveen.jpg',
+    bio: 'Dr. Parveen is an Associate Professor and HOD, Department of Social Sciences and Liberal Studies, School of Humanities, Social Sciences and Liberal Arts (SHSL). She brings a wealth of knowledge in social justice and community engagement, guiding the Living Library project with her expertise and passion for inclusive storytelling.'
   },
   {
-    name: 'Brenda Miles',
-    role: 'Industry Mentor',
-    imageUrl: 'https://picsum.photos/seed/mentor2/200/200',
-    bio: 'As a VP of Engineering at a top tech company, Brenda offers invaluable insights into scaling technology and building sustainable, high-impact products.'
+    name: 'Dr. Nandini Basistha',
+    role: 'Academic Mentor',
+    imageUrl: '/nandini.jpg',
+    bio: 'Dr. Nandini Basistha serves as the Academic Mentor for the Living Library initiative. An Associate Professor in the Department of Liberal Studies & Social Sciences at the School of Humanities, Social Sciences & Liberal Arts, SGT University, Gurugram, she guides students with her expertise and passion for interdisciplinary learning, fostering reflection, dialogue, and intellectual growth.'
   },
+  {
+    name: 'Dr. Mouparna Roy',
+    role: 'Ideation Mentor',
+    imageUrl: '/roy.jpeg',
+    bio: 'Dr. Mouparna Roy is the visionary mind behind the Living Library project. A dedicated academic and innovator, she believes in the power of storytelling as a bridge between knowledge and empathy. Through her guidance and creative vision, the project was conceptualized to promote dialogue, inclusivity, and shared learning within the community.'
+  }
 ];
 
 export const MOST_VIEWED_AUTHORS: TeamMember[] = [
@@ -111,3 +116,4 @@ export const MOST_VIEWED_AUTHORS: TeamMember[] = [
     bio: 'Marcus is a celebrated poet and short story writer, focusing on themes of nature and identity.'
   }
 ];
+

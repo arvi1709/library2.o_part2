@@ -1,85 +1,112 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface EmpathyMeterProps {
-  averageRating: number;
+  averageRating: number; // A percentage from 0-100
   ratingCount: number;
-  userRating: number | null;
-  onRate: (rating: number) => void;
+  userRating: number | null; // A percentage from 0-100
+  onRate: (rating: number) => void; // Expects a percentage from 0-100
   disabled: boolean;
 }
 
-const faces = [
-    { rating: 1, color: '#ef4444', label: 'Terrible', path: <><path strokeLinecap="round" strokeLinejoin="round" d="M8 10l-2 2m0-2l2 2m8-2l-2 2m0-2l2 2" /><path strokeLinecap="round" strokeLinejoin="round" d="M16 16c-2-1.5-6-1.5-8 0" /></> },
-    { rating: 2, color: '#f97316', label: 'Bad', path: <><path strokeLinecap="round" strokeLinejoin="round" d="M9 10.5h.01M15 10.5h.01" /><path strokeLinecap="round" strokeLinejoin="round" d="M16 16c-2-1.5-6-1.5-8 0" /></> },
-    { rating: 3, color: '#eab308', label: 'Okay', path: <><path strokeLinecap="round" strokeLinejoin="round" d="M9 10.5h.01M15 10.5h.01" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 15h8" /></> },
-    { rating: 4, color: '#3b82f6', label: 'Good', path: <><path strokeLinecap="round" strokeLinejoin="round" d="M9 10.5h.01M15 10.5h.01" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 14s1.5 2 4 2 4-2 4-2" /></> },
-    { rating: 5, color: '#22c55e', label: 'Great', path: <><path strokeLinecap="round" strokeLinejoin="round" d="M9 9.5a.5.5 0 11-1 0 .5.5 0 011 0zm6 0a.5.5 0 11-1 0 .5.5 0 011 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 14s1.5 3 4 3 4-3 4-3" /></> },
-];
-
+const getEmojiForValue = (value: number): { emoji: string; label: string; color: string } => {
+  const roundedValue = Math.round(value);
+  if (value < 1 && roundedValue === 0) return { emoji: '🤔', label: 'Rate this story', color: '#64748b' };
+  if (roundedValue <= 20) return { emoji: '😠', label: 'Terrible', color: '#ef4444' };
+  if (roundedValue <= 40) return { emoji: '😟', label: 'Bad', color: '#f97316' };
+  if (roundedValue <= 60) return { emoji: '😐', label: 'Okay', color: '#eab308' };
+  if (roundedValue <= 80) return { emoji: '😄', label: 'Good', color: '#3b82f6' };
+  return { emoji: '😍', label: 'Great', color: '#22c55e' };
+};
 
 const EmpathyMeter: React.FC<EmpathyMeterProps> = ({ userRating, onRate, disabled, averageRating, ratingCount }) => {
-  const [hoverRating, setHoverRating] = useState(0);
-  const displayRating = hoverRating || userRating || Math.round(averageRating) || 0;
+  const [hoverValue, setHoverValue] = useState<number | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  const displayValue = hoverValue ?? userRating ?? averageRating ?? 0;
+  const { emoji, label, color } = getEmojiForValue(displayValue);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (disabled || !barRef.current) return;
+    const rect = barRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    let percentage = (x / rect.width) * 100;
+    if (percentage < 0) percentage = 0;
+    if (percentage > 100) percentage = 100;
+    setHoverValue(percentage);
+  };
+
+  const handleMouseLeave = () => {
+    setHoverValue(null);
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (disabled || !barRef.current) return;
+    
+    // Recalculate percentage on click to ensure accuracy
+    const rect = barRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    let percentage = (x / rect.width) * 100;
+    if (percentage < 0) percentage = 0;
+    if (percentage > 100) percentage = 100;
+
+    onRate(Math.round(percentage));
+  };
+
+  const showLabel = userRating !== null || (averageRating > 0 && ratingCount > 0) || hoverValue !== null;
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-lg border dark:border-slate-700 space-y-4">
       <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 text-center">How did this story make you feel?</h3>
-      <div 
-        className="flex items-center justify-center space-x-2 sm:space-x-4"
-        onMouseLeave={() => setHoverRating(0)}
-        role="radiogroup"
-        aria-label="Story rating"
-      >
-        {faces.map(({ rating, color, label, path }) => {
-          const isActive = rating <= displayRating;
-          const isUserSelected = rating === userRating;
-
-          return (
-            <button
-              key={rating}
-              disabled={disabled}
-              className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 disabled:cursor-not-allowed transform hover:scale-110"
-              style={{ '--tw-ring-color': color } as React.CSSProperties}
-              onMouseEnter={() => !disabled && setHoverRating(rating)}
-              onClick={() => onRate(rating)}
-              aria-label={label}
-              role="radio"
-              aria-checked={isUserSelected}
+      
+      <div className="flex items-center gap-4">
+        <div
+          ref={barRef}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          onClick={handleClick}
+          className={`relative flex-grow h-6 bg-slate-200 dark:bg-slate-700 rounded-full group ${!disabled ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+          role="slider"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(displayValue)}
+          aria-label="Empathy rating"
+        >
+          {/* Bar Fill */}
+          <div 
+            className="h-full rounded-full transition-all duration-150 ease-out"
+            style={{
+              width: `${displayValue}%`,
+              background: 'linear-gradient(to right, #ef4444, #f97316, #eab308, #3b82f6, #22c55e)'
+            }}
+          />
+          
+          {/* Persistent Percentage Label */}
+          {showLabel && (
+             <div 
+              className="absolute top-0 h-full flex items-center transition-all duration-150 ease-out pointer-events-none"
+              style={{ left: `${displayValue}%` }}
             >
-              <span 
-                className={`absolute inset-0 rounded-full transition-colors ${isActive ? '' : 'bg-slate-200 dark:bg-slate-700'}`}
-                style={{ backgroundColor: isActive ? `${color}20` : undefined }}
-              ></span>
-              <svg 
-                className="relative w-8 h-8 sm:w-10 sm:h-10 transition-colors duration-200" 
-                style={{ color: isActive ? color : '#94A3B8' }}
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-                strokeWidth={1.5}
+              <div
+                className="absolute bottom-full mb-2 px-2 py-1 bg-slate-800 text-white text-xs font-semibold rounded-md transform -translate-x-1/2"
               >
-                {path}
-              </svg>
-            </button>
-          )
-        })}
+                {Math.round(displayValue)}%
+                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-800"></div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Emoji */}
+        <div className="text-4xl w-12 h-12 flex items-center justify-center transition-transform duration-200" style={{ transform: hoverValue !== null ? 'scale(1.25)' : 'scale(1)' }}>
+          <span role="img" aria-label={label}>{emoji}</span>
+        </div>
       </div>
       
-      <div className="w-full max-w-sm mx-auto h-2 bg-slate-200 dark:bg-slate-700 rounded-full mt-4 overflow-hidden relative">
-        <div 
-          className="h-full rounded-full transition-all duration-300" 
-          style={{ 
-            width: `${(displayRating / 5) * 100}%`,
-            background: 'linear-gradient(to right, #ef4444, #f97316, #eab308, #3b82f6, #22c55e)'
-          }}
-        />
-      </div>
-      
-      <div className="text-center text-slate-600 dark:text-slate-400">
-        {hoverRating > 0 ? (
-          <p className="font-semibold text-lg" style={{ color: faces[hoverRating-1].color }}>{faces[hoverRating-1].label}</p>
-        ) : userRating ? (
-          <p>Your rating: <span className="font-semibold" style={{ color: faces[userRating-1].color }}>{faces[userRating-1].label}</span></p>
+      <div className="text-center text-slate-600 dark:text-slate-400 min-h-[24px]">
+        {hoverValue !== null && !disabled ? (
+          <p className="font-semibold text-lg animate-fade-in" style={{ color }}>{label}</p>
+        ) : userRating !== null ? (
+          <p>Your rating: <span className="font-semibold" style={{ color: getEmojiForValue(userRating).color }}>{getEmojiForValue(userRating).label}</span></p>
         ) : ratingCount > 0 ? (
           <p>Community average from {ratingCount} vote{ratingCount !== 1 ? 's' : ''}</p>
         ) : (

@@ -67,7 +67,7 @@ app.post('/api/process-file', verifyToken, async (req, res) => {
 
     const filePart = { inlineData: { data: fileData, mimeType } };
     const textPart = {
-      text: "First, extract the full text content from this file. If it's audio, transcribe it. If it's a document, extract the text. Second, based on the extracted content, generate a concise summary of the content. Third, generate 5-7 relevant keywords or tags that describe the main themes. Return the result as a JSON object with three keys: 'content' for the extracted text, 'summary' for the generated summary, and 'tags' for the array of keywords."
+      text: "First, extract the full text content from this file. If it's audio, transcribe it. If it's a document, extract the text. After extracting the text, please perform a cleaning pass: correct any grammatical errors, ensure proper spacing between words that may have been joined together, and reconstruct the original paragraph structure with appropriate line breaks. The final text should be clean and readable. Second, based on the cleaned content, generate a concise summary. Third, generate 5-7 relevant keywords or tags. Fourth, suggest 1-3 relevant categories for the story (e.g., 'Technology', 'Health', 'Science'). Return the result as a JSON object with four keys: 'content' for the cleaned text, 'summary' for the summary, 'tags' for the keywords, and 'categories' for the categories."
     };
 
     const response = await ai.models.generateContent({
@@ -82,6 +82,7 @@ app.post('/api/process-file', verifyToken, async (req, res) => {
             content: { type: Type.STRING },
             summary: { type: Type.STRING },
             tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+            categories: { type: Type.ARRAY, items: { type: Type.STRING } },
           },
         },
       }
@@ -119,7 +120,16 @@ app.post('/api/chat', async (req, res) => {
     if (!history || !message) {
         return res.status(400).json({ error: 'Missing history or message for chat' });
     }
-    const chat = ai.chats.create({ model: 'gemini-2.5-flash', history });
+
+    // System prompt to define the AI's personality
+    const systemPrompt = `You are a friendly and empathetic guide for the "Living Library 2.0," a collection of personal stories about diverse human experiences. Your name is 'Leo'. Your purpose is to help users explore these stories and connect with their themes. Be warm, encouraging, and curious. Ask thoughtful follow-up questions. When appropriate, gently guide users toward the library's themes of caste, gender, migration, and identity. Do not sound like a generic AI. Sound like a friend who loves stories and believes in the power of listening.`;
+
+    const chat = ai.chats.create({ 
+      model: 'gemini-2.5-flash', 
+      history,
+      systemInstruction: systemPrompt 
+    });
+
     const response = await chat.sendMessage({ message });
     res.json({ text: response.text });
   } catch (error) {

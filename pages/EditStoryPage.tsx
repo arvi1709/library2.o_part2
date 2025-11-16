@@ -7,7 +7,7 @@ import type { Resource } from '../types';
 const EditStoryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentUser, stories, updateStory, loading: authLoading } = useAuth();
+  const { currentUser, stories, updateStory, loading: authLoading, deleteStory } = useAuth();
   
   const story = useMemo(() => stories.find(s => s.id === id), [stories, id]);
 
@@ -56,8 +56,18 @@ const EditStoryPage: React.FC = () => {
         setIsLoading(false);
         if(publish) {
             navigate('/profile');
+        } else {
+            alert("Draft saved!");            
         }
     }, 500);
+  };
+
+  const handleDelete = () => {
+    if (!story) return;
+    if (window.confirm(`Are you sure you want to permanently delete "${story.title}"? This action cannot be undone.`)) {
+      deleteStory(story.id);
+      navigate('/profile');
+    }
   };
 
   if (authLoading) {
@@ -73,7 +83,7 @@ const EditStoryPage: React.FC = () => {
         <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
             <h2 className="text-2xl font-bold text-red-600">Error</h2>
             <p className="text-slate-600 dark:text-slate-300 mt-2">{error}</p>
-            <Link to="/profile" className="mt-4 inline-block bg-brand-blue text-white px-4 py-2 rounded-lg">
+            <Link to="/profile" className="mt-4 inline-block text-white px-4 py-2 rounded-lg" style={{ backgroundColor: '#16476A' }}>
                 Back to My Profile
             </Link>
         </div>
@@ -92,36 +102,46 @@ const EditStoryPage: React.FC = () => {
     <div className="max-w-4xl mx-auto">
       <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-brand-blue mb-2">Review & Publish Your Story</h1>
+          <h1 className="text-3xl font-bold text-brand-navy mb-2">Review & Publish Your Story</h1>
           <p className="text-slate-600 dark:text-slate-300">Review the AI-generated content below. You can make any edits needed before publishing your story to the library.</p>
         </div>
 
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Title</label>
-          <input type="text" id="title" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-brand-blue focus:border-brand-blue bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
+          <input type="text" id="title" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-brand-navy focus:border-brand-navy bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
         </div>
 
         <div>
           <label htmlFor="content" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Story Content</label>
-          <textarea id="content" value={content} onChange={e => setContent(e.target.value)} rows={15} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-brand-blue focus:border-brand-blue bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
+          <textarea id="content" value={content} onChange={e => setContent(e.target.value)} rows={15} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-brand-navy focus:border-brand-navy bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
         </div>
         
         <div>
           <label htmlFor="summary" className="block text-sm font-medium text-slate-700 dark:text-slate-300">AI-Generated Summary</label>
-          <textarea id="summary" value={summary} onChange={e => setSummary(e.target.value)} rows={5} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-brand-blue focus:border-brand-blue bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
+          <textarea id="summary" value={summary} onChange={e => setSummary(e.target.value)} rows={5} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-brand-navy focus:border-brand-navy bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
         </div>
 
         <div>
           <label htmlFor="tags" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Tags (comma-separated)</label>
-          <input type="text" id="tags" value={tags} onChange={e => setTags(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-brand-blue focus:border-brand-blue bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
+          <input type="text" id="tags" value={tags} onChange={e => setTags(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-brand-navy focus:border-brand-navy bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t dark:border-slate-700">
             <button onClick={() => handleSave(false)} disabled={isLoading} className="flex-1 justify-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none disabled:bg-slate-200 dark:disabled:bg-slate-500">
                 {isLoading ? <LoadingSpinner/> : 'Save Draft'}
             </button>
-            <button onClick={() => handleSave(true)} disabled={isLoading} className="flex-1 justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-orange hover:bg-orange-600 focus:outline-none disabled:bg-slate-400">
+            <button onClick={() => handleSave(true)} disabled={isLoading} className="flex-1 justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none disabled:bg-slate-400" style={{ backgroundColor: '#bf092f' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#8b0621'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#bf092f'}>>
                 {isLoading ? <LoadingSpinner/> : 'Approve & Publish'}
+            </button>
+        </div>
+        <div className="text-center">
+            <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isLoading}
+                className="text-sm text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
+            >
+                Delete Story Permanently
             </button>
         </div>
       </div>
